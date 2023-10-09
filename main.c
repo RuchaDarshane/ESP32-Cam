@@ -220,9 +220,10 @@ static void post_rest_function(){
 
 
     esp_http_client_config_t config_post = {
-            .url ="http://192.168.36.195/camera_proj/test6.php",
+        .url ="http://192.168.36.195/camera_proj/test6.php",
+        .auth_type = HTTP_AUTH_TYPE_BASIC,
         .method = HTTP_METHOD_POST,
-        .cert_pem = NULL,
+        
         .event_handler = client_event_post_handler };
         
     esp_http_client_handle_t client = esp_http_client_init(&config_post);
@@ -254,31 +255,44 @@ static void post_rest_function(){
     //snprintf(post_data, sizeof(post_data), "image=%s",encoded_data);
     //char post_data = strcat("image=",encoded_data);
     //esp_http_client_set_header(client, "Content-Disposition", "inline; filename=capture.jpg");
-    char post_data[870];
-    char chunk[850];
+    char post_data[670];
+    char chunk[650];
     int pos ;
     int len ;
+    len =500;
+    int a ;
+    a = (strlen(encoded_data) / len) + 1 ;
+    char post_data1[10];
+    
+    snprintf(post_data, sizeof(post_data), "size=%d",a);
     //esp_http_client_set_header(client, "Content-Type", "application/x-www-form-urlencoded");
     //esp_http_client_set_post_field(client, post_data, strlen(post_data));
-    int a=1;
-    esp_http_client_set_header(client, "Transfer-Encoding", "chunked");    
-    for (int i = 0; i < 12; i++)
+    
+    esp_err_t err = esp_http_client_open(client, -1); // write_len=-1 sets header "Transfer-Encoding: chunked" and method to POST
+    //esp_http_client_set_header(client, "Transfer-Encoding", "chunked"); 
+    
+    esp_http_client_write(client, post_data1, strlen(post_data1));
+    
+    for (int i = 0; i < a; i++)
     {
 
         pos = 1;
-        len = 800;
+        
 
         strncpy(chunk,encoded_data+(pos-1),len);
-        snprintf(post_data, sizeof(post_data), "i%d=%s",i+1,chunk);
+        snprintf(post_data, sizeof(post_data), "i=%s",chunk);
         //esp_http_client_set_header(client, "Content-Type", "application/x-www-form-urlencoded");
         esp_http_client_write(client, post_data, strlen(post_data));
         strcpy(chunk, "");
         strcpy(post_data, "");
 
         
-        if(i==11)
+        if(i== (a - 1))
+
         {
-            pos=strlen(encoded_data)-800;
+            pos = pos + len ;
+            len = strlen(encoded_data) - pos ;
+            
         }
         else{
             pos= pos+len;
@@ -286,7 +300,7 @@ static void post_rest_function(){
 
 
     }
-    esp_err_t err = esp_http_client_perform(client);
+    esp_http_client_perform(client);
     //esp_err_t err;
     while (1) {
         err = esp_http_client_perform(client);
